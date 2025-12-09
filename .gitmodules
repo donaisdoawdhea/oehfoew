@@ -1,0 +1,3 @@
+[submodule "kjersv"]
+	path = kjersv
+	url = git@github.com:nanato12/coconala-scraping-cardrush.git

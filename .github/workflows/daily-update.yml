@@ -1,0 +1,91 @@
+name: Update Spreadsheet
+
+on:
+  schedule:
+    # 毎日日本時間午前2時 = UTC 17:00
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Limit number of cards (for testing)"
+        required: false
+        type: string
+
+jobs:
+  attempt-1:
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-2:
+    needs: attempt-1
+    if: ${{ !cancelled() && needs.attempt-1.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-3:
+    needs: attempt-2
+    if: ${{ !cancelled() && needs.attempt-2.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-4:
+    needs: attempt-3
+    if: ${{ !cancelled() && needs.attempt-3.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-5:
+    needs: attempt-4
+    if: ${{ !cancelled() && needs.attempt-4.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-6:
+    needs: attempt-5
+    if: ${{ !cancelled() && needs.attempt-5.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-7:
+    needs: attempt-6
+    if: ${{ !cancelled() && needs.attempt-6.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-8:
+    needs: attempt-7
+    if: ${{ !cancelled() && needs.attempt-7.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-9:
+    needs: attempt-8
+    if: ${{ !cancelled() && needs.attempt-8.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit
+
+  attempt-10:
+    needs: attempt-9
+    if: ${{ !cancelled() && needs.attempt-9.outputs.should_retry == 'true' }}
+    uses: ./.github/workflows/_update-spreadsheet.yml
+    with:
+      limit: ${{ inputs.limit }}
+    secrets: inherit

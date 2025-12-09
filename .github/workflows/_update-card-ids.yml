@@ -1,0 +1,94 @@
+name: Update Card IDs (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      end_page:
+        description: "End page number (for testing)"
+        required: false
+        type: string
+    outputs:
+      should_retry:
+        description: "Whether the workflow should be retried (403 error)"
+        value: ${{ jobs.update.outputs.should_retry }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      should_retry: ${{ steps.check_site.outputs.should_retry }}
+    defaults:
+      run:
+        working-directory: kjersv
+    steps:
+      - name: Check site availability
+        id: check_site
+        working-directory: .
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://cardrush.media/pokemon/cards/)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "403" ]; then
+            echo "Site returned 403 Forbidden"
+            echo "should_retry=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "should_retry=false" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: kjersv/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env file
+        run: |
+          echo "LINE_CHANNEL_ACCESS_TOKEN=${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}" > .env
+          echo "LINE_USER_IDS=${{ secrets.LINE_USER_IDS }}" >> .env
+
+      - name: Set timestamp
+        id: ts
+        run: echo "timestamp=$(TZ=Asia/Tokyo date +"%Y-%m-%d_%H%M%S")" >> $GITHUB_OUTPUT
+
+      - name: Get all card IDs
+        run: |
+          END_PAGE_ARG=""
+          DRY_RUN_ARG=""
+          if [ -n "${{ inputs.end_page }}" ]; then
+            END_PAGE_ARG="--end-page ${{ inputs.end_page }}"
+            DRY_RUN_ARG="--dry-run"
+          fi
+          ./scripts/card/get_all_card_ids.py --timestamp "${{ steps.ts.outputs.timestamp }}" $END_PAGE_ARG $DRY_RUN_ARG
+
+      - name: Notify LINE
+        if: ${{ !inputs.end_page }}
+        run: |
+          ./scripts/notify/line_notify.py --timestamp "${{ steps.ts.outputs.timestamp }}" --type card_ids
+
+      - name: Commit and push to submodule
+        if: ${{ !inputs.end_page }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/csv/all_card_ids.csv
+          if [ -d "output/diff/card_ids" ]; then
+            git add output/diff/card_ids/
+          fi
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update card IDs $(TZ=Asia/Tokyo date +'%Y-%m-%d')"
+            git pull --rebase origin develop
+            git push origin HEAD:develop
+          fi
