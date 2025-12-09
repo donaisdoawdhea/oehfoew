@@ -104,14 +104,4 @@ jobs:
           git pull origin develop
           git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
           git push origin develop
-          python3 -c "
-          import os
-          from dotenv import load_dotenv
-          load_dotenv()
-          from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, PushMessageRequest, TextMessage
-          config = Configuration(access_token=os.environ['LINE_CHANNEL_ACCESS_TOKEN'])
-          with ApiClient(config) as client:
-              api = MessagingApi(client)
-              for user_id in os.environ['LINE_USER_IDS'].split(','):
-                  api.push_message(PushMessageRequest(to=user_id.strip(), messages=[TextMessage(text='[TEST] daily-update dry-run completed')]))
-          "
+          ./scripts/notify/line_notify.py --message "[TEST] daily-update dry-run completed"
