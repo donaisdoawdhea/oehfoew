@@ -40,6 +40,11 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           submodules: recursive
 
+      - name: Pull latest submodule
+        run: |
+          git checkout develop
+          git pull origin develop
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
