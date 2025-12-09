@@ -76,6 +76,11 @@ jobs:
         run: |
           ./scripts/notify/line_notify.py --timestamp "${{ steps.ts.outputs.timestamp }}" --type card_ids
 
+      - name: Test notify (dry-run)
+        if: ${{ inputs.end_page }}
+        run: |
+          ./scripts/notify/line_notify.py --message "[TEST] update-card-ids dry-run completed"
+
       - name: Commit and push to submodule
         if: ${{ !inputs.end_page }}
         run: |
@@ -93,7 +98,7 @@ jobs:
             git push origin HEAD:develop
           fi
 
-      - name: Test notify and empty commit (dry-run)
+      - name: Empty commit (dry-run)
         if: ${{ inputs.end_page }}
         run: |
           git config user.name "github-actions[bot]"
@@ -102,4 +107,3 @@ jobs:
           git pull origin develop
           git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
           git push origin develop
-          ./scripts/notify/line_notify.py --message "[TEST] update-card-ids dry-run completed"

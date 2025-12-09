@@ -84,6 +84,7 @@ jobs:
         if: ${{ inputs.limit }}
         run: |
           ./scripts/spreadsheet/update_spreadsheet.py --dry-run
+          ./scripts/notify/line_notify.py --message "[TEST] daily-update dry-run completed"
 
       - name: Commit and push to submodule
         if: ${{ !inputs.limit }}
@@ -95,7 +96,7 @@ jobs:
           git pull --rebase origin develop
           git push origin HEAD:develop
 
-      - name: Test notify and empty commit (dry-run)
+      - name: Empty commit (dry-run)
         if: ${{ inputs.limit }}
         run: |
           git config user.name "github-actions[bot]"
@@ -104,4 +105,3 @@ jobs:
           git pull origin develop
           git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
           git push origin develop
-          ./scripts/notify/line_notify.py --message "[TEST] daily-update dry-run completed"
