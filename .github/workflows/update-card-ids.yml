@@ -2,8 +2,8 @@ name: Update Card IDs
 
 on:
   schedule:
-    # 毎日日本時間午前0時 = UTC 15:00
-    - cron: "0 15 * * *"
+    # 毎日日本時間23時 = UTC 14:00
+    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
       end_page:

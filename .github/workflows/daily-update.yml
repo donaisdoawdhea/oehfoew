@@ -2,8 +2,8 @@ name: Update Spreadsheet
 
 on:
   schedule:
-    # 毎日日本時間午前2時 = UTC 17:00
-    - cron: "0 17 * * *"
+    # 毎日日本時間午前1時 = UTC 16:00
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       limit:
