@@ -87,21 +87,15 @@ jobs:
           ./scripts/notify/line_notify.py --message "[TEST] daily-update dry-run completed"
 
       - name: Commit and push to submodule
-        if: ${{ !inputs.limit }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/
-          git diff --staged --quiet || git commit -m "Add diff $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
-          git pull --rebase origin develop
-          git push origin HEAD:develop
-
-      - name: Empty commit (dry-run)
-        if: ${{ inputs.limit }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout develop
           git pull origin develop
-          git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          if [ -n "${{ inputs.limit }}" ]; then
+            git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          else
+            git add output/
+            git diff --staged --quiet || git commit -m "Add diff $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          fi
           git push origin develop
