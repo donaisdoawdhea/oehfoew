@@ -84,6 +84,7 @@ jobs:
         if: ${{ inputs.limit }}
         run: |
           ./scripts/spreadsheet/update_spreadsheet.py --dry-run
+          ./scripts/notify/line_notify.py --timestamp "${{ steps.ts.outputs.timestamp }}"
 
       - name: Commit and push to submodule
         if: ${{ !inputs.limit }}

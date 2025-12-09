@@ -72,7 +72,6 @@ jobs:
           ./scripts/card/get_all_card_ids.py --timestamp "${{ steps.ts.outputs.timestamp }}" $END_PAGE_ARG $DRY_RUN_ARG
 
       - name: Notify LINE
-        if: ${{ !inputs.end_page }}
         run: |
           ./scripts/notify/line_notify.py --timestamp "${{ steps.ts.outputs.timestamp }}" --type card_ids
 
