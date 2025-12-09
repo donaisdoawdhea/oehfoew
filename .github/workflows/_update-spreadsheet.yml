@@ -84,7 +84,6 @@ jobs:
         if: ${{ inputs.limit }}
         run: |
           ./scripts/spreadsheet/update_spreadsheet.py --dry-run
-          ./scripts/notify/line_notify.py --timestamp "${{ steps.ts.outputs.timestamp }}"
 
       - name: Commit and push to submodule
         if: ${{ !inputs.limit }}
@@ -95,3 +94,24 @@ jobs:
           git diff --staged --quiet || git commit -m "Add diff $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
           git pull --rebase origin develop
           git push origin HEAD:develop
+
+      - name: Test notify and empty commit (dry-run)
+        if: ${{ inputs.limit }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout develop
+          git pull origin develop
+          git commit --allow-empty -m "Test run completed $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          git push origin develop
+          python3 -c "
+          import os
+          from dotenv import load_dotenv
+          load_dotenv()
+          from linebot.v3.messaging import Configuration, ApiClient, MessagingApi, PushMessageRequest, TextMessage
+          config = Configuration(access_token=os.environ['LINE_CHANNEL_ACCESS_TOKEN'])
+          with ApiClient(config) as client:
+              api = MessagingApi(client)
+              for user_id in os.environ['LINE_USER_IDS'].split(','):
+                  api.push_message(PushMessageRequest(to=user_id.strip(), messages=[TextMessage(text='[TEST] daily-update dry-run completed')]))
+          "
