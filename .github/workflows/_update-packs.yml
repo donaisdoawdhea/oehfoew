@@ -1,0 +1,84 @@
+name: Update Packs (Reusable)
+
+on:
+  workflow_call:
+    outputs:
+      should_retry:
+        description: "Whether the workflow should be retried (403 error)"
+        value: ${{ jobs.update.outputs.should_retry }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      should_retry: ${{ steps.check_site.outputs.should_retry }}
+    defaults:
+      run:
+        working-directory: kjersv
+    steps:
+      - name: Check site availability
+        id: check_site
+        working-directory: .
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://cardrush.media/pokemon/packs)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "403" ]; then
+            echo "Site returned 403 Forbidden"
+            echo "should_retry=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "should_retry=false" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          submodules: recursive
+
+      - name: Pull latest submodule
+        run: |
+          git checkout develop
+          git pull origin develop
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: kjersv/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env file
+        run: |
+          echo "USE_CACHE=False" > .env
+          echo "FETCH_ALL_PACK_PAGES=True" >> .env
+
+      - name: Get packs
+        run: python scripts/pack/get_packs.py
+
+      - name: Commit and push to submodule
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout develop
+          git pull origin develop
+          git add output/csv/pokemon_packs.csv
+          if [ -d "output/images" ]; then
+            git add output/images/
+          fi
+          git diff --staged --quiet || git commit -m "Update packs $(TZ=Asia/Tokyo date +'%Y-%m-%d')"
+          git push origin develop
+
+      - name: Update submodule reference in parent repo
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main
+          git add kjersv
+          git diff --staged --quiet || git commit -m "Update submodule $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          git push origin main
