@@ -1,0 +1,101 @@
+name: Mercari Purchases Check (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      from_date:
+        description: "検索開始日（YYYY-MM-DD、空欄で昨日）"
+        required: false
+        type: string
+      to_date:
+        description: "検索終了日（YYYY-MM-DD、空欄で今日）"
+        required: false
+        type: string
+
+jobs:
+  check-purchases:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kjersv
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          submodules: recursive
+
+      - name: Pull latest submodule
+        run: |
+          git checkout develop
+          git pull origin develop
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: kjersv/requirements.txt
+
+      - name: Install system dependencies for WeasyPrint
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Setup Google credentials
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+          echo '${{ secrets.DRIVE_OAUTH_CREDENTIALS_JSON }}' > oauth_credentials.json
+          echo '${{ secrets.DRIVE_OAUTH_TOKEN }}' > token.json
+
+      - name: Run mercari purchases check
+        env:
+          IMAP_HOST: ${{ secrets.IMAP_HOST }}
+          IMAP_USER: ${{ secrets.IMAP_USER }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+          SPREADSHEET_CREDENTIALS_FILE: credentials.json
+          DRIVE_CREDENTIALS_FILE: oauth_credentials.json
+          DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          MERCARI_SPREADSHEET_ID: ${{ secrets.MERCARI_SPREADSHEET_ID }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+        run: |
+          FROM_DATE="${{ inputs.from_date }}"
+          TO_DATE="${{ inputs.to_date }}"
+          if [ -z "$FROM_DATE" ]; then
+            FROM_DATE=$(date -d "yesterday" +%Y-%m-%d)
+          fi
+          if [ -z "$TO_DATE" ]; then
+            TO_DATE=$(date +%Y-%m-%d)
+          fi
+          python scripts/mercari/check_purchases.py --from "$FROM_DATE" --to "$TO_DATE"
+
+      - name: Commit and push to submodule
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout develop
+          git pull origin develop
+          git add output/csv/mercari/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update mercari purchases $(TZ=Asia/Tokyo date +'%Y-%m-%d')"
+            git push origin develop
+          fi
+
+      - name: Update submodule reference in parent repo
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main
+          git add kjersv
+          git diff --staged --quiet || git commit -m "Update submodule $(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')"
+          git push origin main

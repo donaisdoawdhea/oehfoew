@@ -1,0 +1,24 @@
+name: Mercari Purchases Check
+
+on:
+  schedule:
+    # 1時間ごとに実行
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: "検索開始日（YYYY-MM-DD、空欄で昨日）"
+        required: false
+        type: string
+      to_date:
+        description: "検索終了日（YYYY-MM-DD、空欄で今日）"
+        required: false
+        type: string
+
+jobs:
+  check-purchases:
+    uses: ./.github/workflows/_mercari-purchases.yml
+    with:
+      from_date: ${{ inputs.from_date }}
+      to_date: ${{ inputs.to_date }}
+    secrets: inherit
